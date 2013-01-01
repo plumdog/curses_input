@@ -21,15 +21,17 @@ along with CursesSelect.  If not, see <http://www.gnu.org/licenses/>.
 
 import curses
 
+import choice
+
 
 colors_initialised = False
-version = 1.0
+version = 1.1
 
 
-"""Gets colors by index. Initialises as needed, then just looks up the
-requested color.
-"""
 def _get_color(color_index):
+    """Gets colors by index. Initialises as needed, then just looks up
+    the requested color.
+    """
     global colors_initialised
     if not colors_initialised:
         """color pair 1, white on blue"""
@@ -39,122 +41,43 @@ def _get_color(color_index):
     return curses.color_pair(color_index)
 
 
-"""If num is outside of 0 to length-1, returns 0 or length-1,
-whichever has been overrun (ie -3 returns 0, and length+3 returns
-length-1).
-"""
-def _keep_in_range(num, length):
-    if num < 0:
-        return 0
-    elif num >= length:
-        return length-1
-    return num
-
-
-"""Function that prints to the variable screen a display to select a
-value from select_from_list.
-
-If title is not None, then it displays it as the top line.
-"""
 def _select_f(screen, select_from_list, title, exitable):
-    """Initialise the cursor position to the first entry. Initialise
-    the top visible entry to the first entry too, and get the screen
-    size."""
-    screen.scrollok(False)
-    cursor_pos = 0
-    current_top = 0
-    redraw_count = 0
-    selected_value = None
+    """Function that prints to the variable screen a display to select
+    a value from select_from_list. If title is not None, then it
+    displays it as the top line.
+    """
+    select_handler = choice.Choice(screen, select_from_list,
+                                   title=title, exitable=exitable)
+    return select_handler.get_result()
 
-    """Main loop. Only exits when returning values."""
-    while True:
-        height, width = screen.getmaxyx()
+def _multi_select_f(screen, select_from_list, title, exitable):
+    multi_select_handler = choice.MultiChoice(
+        screen, select_from_list, title=title, exitable=exitable)
 
-        """Lazy, but effective. Just redraw everything each time."""
-        screen.clear()
+    return multi_select_handler.get_result()
 
-        redraw_count += 1
+def multi_select(select_from, **kwargs):
+    title = kwargs.get('title', None)
+    exitable = kwargs.get('exitable', True)
 
-        if title is not None:
-            """Display the title."""
-            screen.addstr(0, 0, title, _get_color(1))
-            title_lines = (len(title) // width) + 1
-            height -= title_lines + 1
-        
-        if cursor_pos >= height + current_top:
-            """If the selected value would be off the bottom of the
-            screen, then increase the current top value to show
-            more."""
-            current_top = cursor_pos - height + 1
-        elif cursor_pos < current_top:
-            """If the selected value would be off the top of the
-            screen, then set the top to be the cursor position."""
-            current_top = cursor_pos
-        
-        current_bottom = current_top + height - 1
+    return curses.wrapper(_multi_select_f, select_from, title, exitable)
+    
 
-        """Display the current state of the list."""
-        for i , list_item in enumerate(select_from_list):
-            if current_top <= i <= current_bottom:
-                """If the current value in the list is within the
-                current range to display, then add it to screen. Use
-                colour 1, unless it is the current selected value,
-                then use colour 2. And shift down by the height of the
-                title plus one."""
-                color = _get_color(1)
-                if i == cursor_pos:
-                    color = _get_color(2)
-                pos = i - current_top
-                if title is not None:
-                    pos += title_lines + 1
-                screen.addstr(pos, 0, str(list_item), color)
-        """Done drawing the list."""
-
-        """Debugging."""
-        color = _get_color(0)
-        debug_from = (10, 5)
-        screen.addstr(debug_from[1], debug_from[0], 'cursor_pos = '+str(cursor_pos), color)
-        screen.addstr(debug_from[1]+1, debug_from[0], 'current_top = '+str(current_top), color)
-        screen.addstr(debug_from[1]+2, debug_from[0], 'redraw_count = '+str(redraw_count), color)
-        """End of debugging."""
-
-        """Handle key inputs."""
-        c = screen.getch()
-        move_by = 0
-        if c == curses.KEY_DOWN:
-            move_by = 1
-        elif c == curses.KEY_UP:
-            move_by = -1
-        elif c == curses.KEY_NPAGE:
-            move_by = 5
-        elif c == curses.KEY_PPAGE:
-            move_by = -5
-        elif c == ord("\n"):
-            return select_from_list[cursor_pos]
-        elif exitable and c == 27:
-            """Hack for when pressing escape key."""
-            return None
-        """Done key inputs."""
-
-        cursor_pos = _keep_in_range(cursor_pos + move_by,
-                                    len(select_from_list))
-
-
-"""Starts a terminal view to select a value from the input_list. Has
-optional keyword arguments:
-
-title, the title to be displayed above the list selection.
-exitable, whether the list can be exited with the ESC key
-
-"""
 def select(input_list, **kwargs):
+    """Starts a terminal view to select a value from the input_list. Has
+    optional keyword arguments:
+
+    title, the title to be displayed above the list selection.
+    exitable, whether the list can be exited with the ESC key
+
+    """
     if not isinstance(input_list, list):
         raise TypeError('Input must be a list')
     if len(input_list) == 0:
         raise ValueError('Input iterable must not be empty')
 
     title = kwargs.get('title', None)
-    exitable = kwargs.get('exitable', False)
+    exitable = kwargs.get('exitable', True)
 
     return curses.wrapper(_select_f, input_list, title, exitable)
 
@@ -244,20 +167,6 @@ def string_input(**kwargs):
     validation_f = kwargs.get('validation_f', None)
     title = str(kwargs.get('title', None))
     error = str(kwargs.get('error', ''))
-    exitable = bool(kwargs.get('exitable', False))
+    exitable = bool(kwargs.get('exitable', True))
     password = bool(kwargs.get('password', False))
     return curses.wrapper(_input_f, validation_f, title, error, exitable, password)
-
-
-if __name__ == '__main__':
-
-    """
-    test_list = list(range(200))
-    title = 'Please select a letter aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa:'
-    #title = ''
-    x = select(test_list, title=title, exitable=True)
-    print(x)
-    """
-    val_f = lambda x : (len(x) > 4)
-    x = string_input(title='Title', exitable=True, validation_f=val_f, error='Input is not valid', password=True)
-    print(x)
