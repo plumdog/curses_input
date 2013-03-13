@@ -3,6 +3,8 @@ import curses
 import colors
 import selectable
 
+DEBUG = False
+
 
 class Scrollable(selectable.Selectable):
     """Class to handle to common functionality between scrollable
@@ -42,7 +44,7 @@ class Scrollable(selectable.Selectable):
 
         if self.title is not None:
             """Display the title."""
-            self.screen.addstr(0, 0, self.title, color.get_color(1))
+            self.screen.addstr(0, 0, self.title, colors.get_color(1))
             self.title_lines = (len(self.title) // width) + 1
             height -= self.title_lines + 1
 
@@ -60,21 +62,22 @@ class Scrollable(selectable.Selectable):
 
         self.draw_body()
 
-        self.debugging['cursor_pos'] = str(self.cursor_pos)
-        self.debugging['current_top'] = str(self.current_top)
-        self.debugging['redraw_count'] = str(self.redraw_count)
-        self.debugging['result'] = str(self.result)
+        if DEBUG:
+            self.debugging['cursor_pos'] = str(self.cursor_pos)
+            self.debugging['current_top'] = str(self.current_top)
+            self.debugging['redraw_count'] = str(self.redraw_count)
+            self.debugging['result'] = str(self.result)
         
 
-        """Debugging."""
-        debug_from = (10, 5)
-        color = colors.get_color(1)
-        line_num = 0
-        for k, v in self.debugging.items():
-            self.screen.addstr(debug_from[1] + line_num, debug_from[0],
-                               '{k} = {v}'.format(k=k, v=v), color)
-            line_num += 1
-        """End of debugging."""
+            """Debugging."""
+            debug_from = (10, 5)
+            color = colors.get_color(1)
+            line_num = 0
+            for k, v in list(self.debugging.items()):
+                self.screen.addstr(debug_from[1] + line_num, debug_from[0],
+                                   '{k} = {v}'.format(k=k, v=v), color)
+                line_num += 1
+            """End of debugging."""
 
         self.move_by = 0
         self.handle_keys(self.screen.getch())
