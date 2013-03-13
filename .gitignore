@@ -2,6 +2,8 @@
 
 # Text files
 *.txt
+# Log files
+*.log
 
 # C extensions
 *.so
