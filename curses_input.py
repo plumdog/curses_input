@@ -28,6 +28,10 @@ import scrollable
 colors_initialised = False
 version = 1.1
 
+def wrapper_func(func, *args):
+    curses.wrapper(func, *args)
+    curses.setupterm = lambda: None
+
 
 def _get_color(color_index):
     """Gets colors by index. Initialises as needed, then just looks up
