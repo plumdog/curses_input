@@ -22,6 +22,7 @@ along with CursesSelect.  If not, see <http://www.gnu.org/licenses/>.
 import curses
 
 import choice
+import scrollable
 
 
 colors_initialised = False
@@ -159,7 +160,7 @@ def _input_f(screen, validation_function, title, error_message, exitable, passwo
             string_list.insert(cursor_pos, chr(c))
             cursor_pos += 1
             
-        cursor_pos = _keep_in_range(cursor_pos + move_by,
+        cursor_pos = scrollable._keep_in_range(cursor_pos + move_by,
                                     len(string_list)+1)
 
 
