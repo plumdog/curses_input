@@ -29,8 +29,11 @@ colors_initialised = False
 version = 1.1
 
 def wrapper_func(func, *args):
-    curses.wrapper(func, *args)
-    curses.setupterm = lambda: None
+    def _null_func(*args, **kwargs):
+        pass
+    return_value = curses.wrapper(func, *args)
+    curses.setupterm = _null_func
+    return return_value
 
 
 def _get_color(color_index):
@@ -65,7 +68,7 @@ def multi_select(select_from, **kwargs):
     title = kwargs.get('title', None)
     exitable = kwargs.get('exitable', True)
 
-    return curses.wrapper(_multi_select_f, select_from, title, exitable)
+    return wrapper_func(_multi_select_f, select_from, title, exitable)
     
 
 def select(input_list, **kwargs):
@@ -84,7 +87,7 @@ def select(input_list, **kwargs):
     title = kwargs.get('title', None)
     exitable = kwargs.get('exitable', True)
 
-    return curses.wrapper(_select_f, input_list, title, exitable)
+    return wrapper_func(_select_f, input_list, title, exitable)
 
 
 def _input_f(screen, validation_function, title, error_message, exitable, password):
@@ -174,4 +177,4 @@ def string_input(**kwargs):
     error = str(kwargs.get('error', ''))
     exitable = bool(kwargs.get('exitable', True))
     password = bool(kwargs.get('password', False))
-    return curses.wrapper(_input_f, validation_f, title, error, exitable, password)
+    return wrapper_func(_input_f, validation_f, title, error, exitable, password)
