@@ -1,42 +1,58 @@
 import curses
 
-import scrollable
+from scrollable import Scrollable
 import colors
 
-class Choice(scrollable.Scrollable):
+
+class Choice(Scrollable):
     """Class to handle selecting a single value from a list."""
 
     def __init__(self, screen, select_from, **kwargs):
-        
+        if len(select_from) == 0:
+            raise ValueError('Input iterable must not be empty')
+
         self.select_from = select_from
         self.title = kwargs.get('title', None)
-        self.exitable = kwargs.get('exitable', True)
-
-        super(Choice, self).__init__(screen, title=self.title)
+        super(Choice, self).__init__(screen, **kwargs)
 
     def draw_body(self):
         """Display the current state of the list."""
-        for i , list_item in enumerate(self.select_from):
+        for i, list_item in enumerate(self.select_from):
             if self.current_top <= i <= self.current_bottom:
                 """If the current value in the list is within the
                 current range to display, then add it to screen. Use
-                colour 1, unless it is the current selected value,
-                then use colour 2. And shift down by the height of the
+                color 1, unless it is the current selected value,
+                then use color 2. And shift down by the height of the
                 title plus one."""
-                color = colors.get_color(1)
-                if i == self.cursor_pos:
-                    color = colors.get_color(2)
-                pos = i - self.current_top
+                y_pos = i - self.current_top
                 if self.title is not None:
-                    pos += self.title_lines + 1
-                self.screen.addstr(pos, 0, str(list_item), color)
+                    y_pos += self.title_lines + 1
+                list_item_str = str(list_item)
+
+                self._draw_all(y_pos, list_item_str, i)
+
         """Done drawing the list."""
+
+    def _draw_highlighted(self, y_pos, text, color_number=2):
+        self._draw_standard(y_pos, '>' + text + '<', color_number=color_number)
+
+    def _draw_standard(self, y_pos, text, color_number=1):
+        self.screen.addstr(y_pos, 0, text, self.get_color(color_number))
+
+    def _draw_all(self, y_pos, text, list_pos):
+        if list_pos == self.cursor_pos:
+            self._draw_highlighted(y_pos, text)
+        else:
+            self._draw_standard(y_pos, text)
+
+    def handle_enter(self):
+        self.result = self.select_from[self.cursor_pos]
+        self.has_result = True
 
     def handle_keys(self, key):
         super(Choice, self).handle_keys(key)
         if key == ord("\n"):
-            self.result = self.select_from[self.cursor_pos]
-            self.has_result = True
+            self.handle_enter()
         elif self.exitable and key == 27:
             """Hack for when pressing escape key."""
             self.result = None
@@ -44,42 +60,31 @@ class Choice(scrollable.Scrollable):
         """Done key inputs."""
 
 
-class MultiChoice(scrollable.Scrollable):
+class MultiChoice(Choice):
     """Class to handle selecting a multiple values from a list."""
 
     def __init__(self, screen, select_from, **kwargs):
-        self.screen = screen
-        self.select_from = select_from
-        self.title = kwargs.get('title', None)
-        self.exitable = kwargs.get('exitable', True)
-        super(MultiChoice, self).__init__(screen, title=self.title)
+        super(MultiChoice, self).__init__(screen, select_from, **kwargs)
         self.result = []
 
-    def draw_body(self):
-        """Display the current state of the list."""
-        for i , list_item in enumerate(self.select_from):
-            if self.current_top <= i <= self.current_bottom:
-                """If the current value in the list is within the
-                current range to display, then add it to screen. Use
-                colour 1, unless it is the current selected value,
-                then use colour 2. And shift down by the height of the
-                title plus one."""
-                color = colors.get_color(1)
-                if i == self.cursor_pos:
-                    if list_item in self.result:
-                        color = colors.get_color(4)
-                    else:
-                        color = colors.get_color(2)
-                else:
-                    if list_item in self.result:
-                        color = colors.get_color(3)
-                    else:
-                        color = colors.get_color(1)
-                pos = i - self.current_top
-                if self.title is not None:
-                    pos += self.title_lines + 1
-                self.screen.addstr(pos, 0, str(list_item), color)
-        """Done drawing the list."""
+    def _draw_selected(self, y_pos, text):
+        self._draw_standard(y_pos, text, 4)
+
+    def _draw_selected_highlighted(self, y_pos, text):
+        self._draw_highlighted(y_pos, text, 3)
+
+    def _draw_all(self, y_pos, text, list_pos):
+        list_item = self.select_from[list_pos]
+        if list_item in self.result:
+            if list_pos == self.cursor_pos:
+                self._draw_selected_highlighted(y_pos, text)
+            else:
+                self._draw_selected(y_pos, text)
+        else:
+            super(MultiChoice, self)._draw_all(y_pos, text, list_pos)
+
+    def handle_enter(self):
+        self.has_result = True
 
     def handle_keys(self, key):
         super(MultiChoice, self).handle_keys(key)
@@ -90,10 +95,4 @@ class MultiChoice(scrollable.Scrollable):
                 self.result.append(current_item)
             else:
                 self.result.remove(current_item)
-        elif key == ord("\n"):
-            self.has_result = True
-        elif self.exitable and key == 27:
-            """Hack for when pressing escape key."""
-            self.result = None
-            self.has_result = True
         """Done key inputs."""

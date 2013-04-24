@@ -1,3 +1,6 @@
+import colors
+
+
 class Selectable(object):
     """Class to be inherited by object that can return results."""
 
@@ -12,6 +15,7 @@ class Selectable(object):
         self.screen = screen
         self.has_result = False
         self.result = None
+        self.debug = kwargs.get('debug', False)
 
         self.screen.scrollok(kwargs.get('scroll', False))
 
@@ -23,3 +27,6 @@ class Selectable(object):
             self.draw()
             if self.has_result:
                 return self.result
+
+    def get_color(self, color_num):
+        return colors.get_color(color_num)
