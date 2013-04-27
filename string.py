@@ -79,8 +79,9 @@ class String(Scrollable):
             elif c == curses.KEY_BACKSPACE:
                 if cursor_pos > 0:
                     del self.string_list[cursor_pos - 1]
+                    cursor_pos -= 1
             elif c == curses.KEY_DC:
-                if cursor_pos < len(string_list):
+                if cursor_pos < len(self.string_list):
                     del self.string_list[cursor_pos]
             elif c == ord("\n"):
                 """If input is enter, then return the string if it is
@@ -97,5 +98,5 @@ class String(Scrollable):
                 self.string_list.insert(cursor_pos, chr(c))
                 cursor_pos += 1
 
-            cursor_pos = Input.keep_in_range(
+            cursor_pos = String.keep_in_range(
                 cursor_pos + move_by, len(self.string_list) + 1)
