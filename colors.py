@@ -3,12 +3,32 @@ import curses
 
 _colors_init = False
 """Default color pairs."""
-colors_dict = {
-    1: ('WHITE', 'BLUE'),
-    2: ('BLACK', 'BLUE'),
-    3: ('BLUE', 'BLACK'),
-    4: ('BLUE', 'WHITE')
+_colors_dict_dict = {
+    'blue': {
+        1: ('WHITE', 'BLUE'),
+        2: ('BLACK', 'BLUE'),
+        3: ('BLUE', 'BLACK'),
+        4: ('BLUE', 'WHITE')},
+    'red': {
+        1: ('RED', 'YELLOW'),
+        2: ('WHITE', 'RED'),
+        3: ('YELLOW', 'RED'),
+        4: ('RED', 'WHITE')},
+    'black': {
+        1: ('BLACK', 'WHITE'),
+        2: ('BLACK', 'WHITE'),
+        3: ('WHITE', 'BLACK'),
+        4: ('WHITE', 'BLACK'),
+        },
+    'white': {
+        1: ('WHITE', 'BLACK'),
+        2: ('WHITE', 'BLACK'),
+        3: ('BLACK', 'WHITE'),
+        4: ('BLACK', 'WHITE'),
+        }
     }
+
+_colors_dict = _colors_dict_dict['blue']
 
 
 def parse_color(color):
@@ -23,12 +43,18 @@ def set_colors(colors_dict):
         curses.init_pair(color_number, fore_color, back_color)
 
 
+def set_color_scheme(name):
+    global _colors_dict
+    global _colors_dict_dict
+    _colors_dict = _colors_dict_dict[name]
+
+
 def get_color(color_id):
-    global colors_dict
+    global _colors_dict
     global _colors_init
 
     if not _colors_init:
-        set_colors(colors_dict)
+        set_colors(_colors_dict)
         _colors_init = True
 
     return curses.color_pair(color_id)

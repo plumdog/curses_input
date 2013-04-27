@@ -39,6 +39,10 @@ def set_colors(colors_dict_options):
     colors.colors_dict = combined_colors
 
 
+def set_color_scheme(name):
+    colors.set_color_scheme(name)
+
+
 def _wrapper_func(func, *args, **kwargs):
     return_value = curses.wrapper(func, *args, **kwargs)
 
