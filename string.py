@@ -83,6 +83,10 @@ class String(Scrollable):
             elif c == curses.KEY_DC:
                 if cursor_pos < len(self.string_list):
                     del self.string_list[cursor_pos]
+            elif c == curses.KEY_HOME:
+                cursor_pos = 0
+            elif c == curses.KEY_END:
+                cursor_pos = len(self.string_list)
             elif c == ord("\n"):
                 """If input is enter, then return the string if it is
                 valid."""

@@ -65,10 +65,11 @@ class MultiChoice(Choice):
 
     def __init__(self, screen, select_from, **kwargs):
         super(MultiChoice, self).__init__(screen, select_from, **kwargs)
+        self.previous_results = []
         self.result = []
 
     def _draw_selected(self, y_pos, text):
-        self._draw_standard(y_pos, text, 4)
+        self._draw_standard(y_pos, '>' + text, 4)
 
     def _draw_selected_highlighted(self, y_pos, text):
         self._draw_highlighted(y_pos, text, 3)
@@ -86,13 +87,37 @@ class MultiChoice(Choice):
     def handle_enter(self):
         self.has_result = True
 
+    def save_result(self):
+        self.previous_results.append(list(self.result))
+
     def handle_keys(self, key):
         super(MultiChoice, self).handle_keys(key)
         """Handle key inputs."""
         if key == ord(" "):
+            """Space toggles the item currently at the cursor."""
             current_item = self.select_from[self.cursor_pos]
             if current_item not in self.result:
+                self.save_result()
                 self.result.append(current_item)
             else:
+                self.save_result()
                 self.result.remove(current_item)
+        elif key == ord("i"):
+            """i key inverts the current selection."""
+            self.save_result()
+            new_selection = []
+            for item in self.select_from:
+                if item not in self.result:
+                    new_selection.append(item)
+            self.result = new_selection
+        elif key == ord("c"):
+            self.save_result()
+            """c key clears the current selection."""
+            self.result = []
+        elif key == ord("u"):
+            """u key reverts the current selection to its previous
+            value."""
+            if self.previous_results:
+                self.result = self.previous_results.pop()
+                
         """Done key inputs."""
