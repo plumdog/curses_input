@@ -1,4 +1,5 @@
 import colors
+import curses
 
 
 class Selectable(object):
@@ -13,6 +14,7 @@ class Selectable(object):
         screen to not scroll by default, but this can be changed if
         needed by passing in the keyword 'scroll'."""
         self.screen = screen
+        curses.curs_set(0)
         self.has_result = False
         self.result = None
         self.debug = kwargs.get('debug', False)
