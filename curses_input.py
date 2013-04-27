@@ -25,6 +25,7 @@ import sys
 from choice import Choice, MultiChoice
 from string import String
 import colors
+from colors import set_color_scheme, color_schemes
 
 
 def set_colors(colors_dict_options):
@@ -37,10 +38,6 @@ def set_colors(colors_dict_options):
     combined_colors = dict(
         colors.colors_dict.items() + colors_dict_options.items())
     colors.colors_dict = combined_colors
-
-
-def set_color_scheme(name):
-    colors.set_color_scheme(name)
 
 
 def _wrapper_func(func, *args, **kwargs):

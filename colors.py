@@ -35,6 +35,11 @@ def parse_color(color):
     return getattr(curses, 'COLOR_' + color, curses.COLOR_WHITE)
 
 
+def color_schemes():
+    global _colors_dict_dict
+    return _colors_dict_dict.keys()
+
+
 def set_colors(colors_dict):
     for color_number, color in colors_dict.items():
         fore, back = color
