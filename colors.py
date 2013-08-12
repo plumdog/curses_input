@@ -16,14 +16,14 @@ _colors_dict_dict = {
         4: ('RED', 'WHITE')},
     'black': {
         1: ('BLACK', 'WHITE'),
-        2: ('BLACK', 'WHITE'),
-        3: ('WHITE', 'BLACK'),
+        2: ('WHITE', 'BLACK'),
+        3: ('BLACK', 'WHITE'),
         4: ('WHITE', 'BLACK'),
         },
     'white': {
         1: ('WHITE', 'BLACK'),
-        2: ('WHITE', 'BLACK'),
-        3: ('BLACK', 'WHITE'),
+        2: ('BLACK', 'WHITE'),
+        3: ('WHITE', 'BLACK'),
         4: ('BLACK', 'WHITE'),
         }
     }
