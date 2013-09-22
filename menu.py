@@ -49,6 +49,8 @@ class MenuCurses(object):
         value storing child of the current parent that is selected."""
         self.current_parent = ROOT
         self.current_position = None
+        self.scroll_position = 0
+        self.scroll_end = self.screen_size[0] // 2
 
         self.output_list = []
         self.full_output_list = []
@@ -88,10 +90,6 @@ class MenuCurses(object):
         return [border_lines, ancestor_lines, border_lines]
 
     def draw(self):
-        self._draw()
-            
-
-    def _draw(self):
         """Draws the current menu to the screen."""
         self.draw_count += 1
 
@@ -110,7 +108,35 @@ class MenuCurses(object):
                 i, 0, anc_str,
                 colors.get_color(1))
         lines_shift = len(anc_strings)
-        for i, item in enumerate(self.get_children(self.current_parent)):
+        num_lines = self.scroll_end - lines_shift
+        items = self.get_children(self.current_parent)
+        try:
+            current_item_pos = items.index(self.current_position)
+        except:
+            current_item_pos = 0
+
+        start, stop = self.scroll_position, self.scroll_position + num_lines
+
+        # make sure that the current item will be displayed
+        if (current_item_pos < start):
+            start = current_item_pos
+            stop = current_item_pos + num_lines
+        elif (current_item_pos >= stop):
+            start = current_item_pos - num_lines + 1
+            stop = current_item_pos + 1
+
+        # if start is negative, shift both upward
+        if start < 0:
+            start = 0
+            stop = stop + abs(start)
+
+        # if stop is after the end of items, clip it
+        stop = min(stop, len(items))
+        self.scroll_position = start
+
+        items = items[start:stop]
+
+        for i, item in enumerate(items):
             color = colors.get_color(1)
             string = item.name
             if item is self.current_position:
@@ -120,8 +146,9 @@ class MenuCurses(object):
                 string += '*'
             if self.get_children(item):
                 string += ' >>'
-                
-            self.menu_window.addstr(i+lines_shift, 0, string, color)
+            y_pos = i + lines_shift
+
+            self.menu_window.addstr(y_pos, 0, string, color)
 
         color = colors.get_color(1)
 
@@ -231,8 +258,7 @@ class MenuCurses(object):
             first_child = None
         return first_child
 
-    def get_sibling(self, menu_item, rel_pos):
-        """ """
+    def siblings(self, menu_item):
         item_parent = None
         for item, parent in self.items:
             if item is menu_item:
@@ -240,8 +266,10 @@ class MenuCurses(object):
 
         if item_parent is None:
             item_parent = ROOT
-        siblings = self.get_children(item_parent)
-        
+        return self.get_children(item_parent)
+
+    def get_sibling(self, menu_item, rel_pos):
+        siblings = self.siblings(menu_item)
         if rel_pos is None or menu_item not in siblings:
             return siblings[0]
         return siblings[siblings.index(menu_item) + rel_pos]
