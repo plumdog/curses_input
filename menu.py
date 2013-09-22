@@ -230,7 +230,6 @@ class MenuCurses(object):
             self.handle_keys()
             if self.return_done:
                 return self.return_value
-        return 'Done'
 
     def get_parent(self, menu_item):
         """Returns the parent of the given menu item. Raises a

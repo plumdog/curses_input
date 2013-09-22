@@ -1,5 +1,5 @@
 __title__ = 'curses_input'
-__version__ = '0.4.2'
+__version__ = '0.4.3'
 __build__ = '0x000001'
 __author__ = 'Andrew Plummer'
 __license__ = 'GPL3'
