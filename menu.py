@@ -329,22 +329,13 @@ class MenuItem(object):
 
     def func_isset(self):
         return self._func is not None
-    
 
     def func(self, *args, **kwargs):
         if not self.func_isset():
             return
 
-        print '--- Calling function for %s ---' % self.name
-
-        if self._func:
-            print 'Function found.'
-            out = self._func(self, *args, **kwargs)
-            print '--- Done. ---'
-        else:
-            print 'None.'
-
-        return out
+        
+        return self._func(self, *args, **kwargs)
 
     def __repr__(self):
         return 'MenuItem {name}'.format(name=self.name)
