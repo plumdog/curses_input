@@ -1,21 +1,19 @@
 import sys
-import io
-import threading
-import time
+import StringIO
 import curses
-import logging
+import curses_input
 
 import colors
 
-logging.basicConfig(filename='menu.log', level=logging.DEBUG)
-
 ROOT = 'root'
-UPDATE_SLEEP = 0.01
-DISPLAY_LIST_LENGTH = 10
-
 DEBUG = False
 
-class Menu(object):
+
+class MenuClosedError(Exception):
+    pass
+
+
+class MenuCurses(object):
 
     def __init__(self, screen, **kwargs):
         """Initialises the menu object to store the tree of options.
@@ -34,10 +32,12 @@ class Menu(object):
         self.menu_window.scrollok(False)
         self.log_window.scrollok(False)
         self.draw_count = 0
+        self.root_name = kwargs.get('root_name', 'Root')
 
         self.debug_dict = {}
 
-        self.out_stream = sys.stdout = io.StringIO()
+        self.old_stream = sys.stdout
+        self.out_stream = sys.stdout = StringIO.StringIO()
 
         """A list of (menu_item, parent) 2-tuples."""
         self.items = []
@@ -56,11 +56,19 @@ class Menu(object):
         corresponds to the end of list and moves as the list grows.
         """
         self.output_position = -1
-        self.output_length = 5
+        self.output_length = log_window_coords[0] - 1
+
+        self.return_value = None
+        self.return_done = False
         
         self.process_running = False
+        self.draw()
+
+    def reset_stdout(self):
+        sys.stdout = self.old_stream
 
     def add_item(self, menu_item, parent=ROOT):
+        menu_item.parent = parent
         self.items.append((menu_item, parent))
 
     def update_ouput_list(self):
@@ -69,7 +77,21 @@ class Menu(object):
         list_to = self.output_position
         self.output_list = self.full_output_list[list_from:list_to]
 
+    def ancestors_strings(self):
+        ancestors = self.get_ancestors(self.current_parent)
+        ancestor_names = [self.root_name] + [item.name for item in ancestors[1:]]
+        ancestor_lines = '|' + '|'.join(ancestor_names) + '|'
+
+        border_str = ['-' * len(s) for s in ancestor_names]
+        border_lines = '+' + '+'.join(border_str) + '+'
+        
+        return [border_lines, ancestor_lines, border_lines]
+
     def draw(self):
+        self._draw()
+            
+
+    def _draw(self):
         """Draws the current menu to the screen."""
         self.draw_count += 1
 
@@ -77,17 +99,29 @@ class Menu(object):
             self.debug_dict['draw_count'] = self.draw_count
             self.debug_dict['output_position'] = self.output_position
 
+        # could be much cleverer here. Note what has changed and only
+        # clear and redraw that.
         self.menu_window.clear()
         self.log_window.clear()
 
-        self.menu_window.addstr(
-            0, 0, str(self.get_ancestors(self.current_parent)),
-            colors.get_color(1))
+        anc_strings = self.ancestors_strings()
+        for i, anc_str in enumerate(anc_strings):
+            self.menu_window.addstr(
+                i, 0, anc_str,
+                colors.get_color(1))
+        lines_shift = len(anc_strings)
         for i, item in enumerate(self.get_children(self.current_parent)):
             color = colors.get_color(1)
+            string = item.name
             if item is self.current_position:
                 color = colors.get_color(2)
-            self.menu_window.addstr(i+1, 0, item.name, color)
+                string = '>' + string + '<'
+            if item.func_isset():
+                string += '*'
+            if self.get_children(item):
+                string += ' >>'
+                
+            self.menu_window.addstr(i+lines_shift, 0, string, color)
 
         color = colors.get_color(1)
 
@@ -113,13 +147,16 @@ class Menu(object):
         """Gets a key input from the screen and processes it."""
         key = self.screen.getch()
 
+        if self.process_running:
+            return
+
         if key == curses.KEY_DOWN:
             """If the down key is pressed, then select the next sibling."""
             self.current_position = self.next_sibling(self.current_position)
         elif key == curses.KEY_UP:
             """If the up key is pressed, then select the previous sibling."""
             self.current_position = self.previous_sibling(self.current_position)
-        elif key == curses.KEY_RIGHT and self.current_position is not None:
+        elif key == curses.KEY_RIGHT and self.current_position is not None and self.get_children(self.current_position):
             """If the right key is pressed and if the current position
             is not None, then move down the tree."""
             self.current_parent = self.current_position
@@ -152,15 +189,21 @@ class Menu(object):
                 self.process_running = True
                 self.draw()
                 self.output_position = -1
-                self.current_position.func()
+                self.return_value = self.current_position.func()
+                if self.current_position.func_returns:
+                    self.return_done = True
                 self.process_running = False
-        elif key == ord('x'):
+        elif key == 27:
+            # hack for when pressing escape
             self.running = False
 
     def run(self):
         while self.running:
             self.draw()
             self.handle_keys()
+            if self.return_done:
+                return self.return_value
+        return 'Done'
 
     def get_parent(self, menu_item):
         """Returns the parent of the given menu item. Raises a
@@ -237,43 +280,69 @@ class Menu(object):
 
 
 class MenuItem(object):
-    def __init__(self, name, **kwargs):
+    def __init__(self, name, parent=None, **kwargs):
         self.name = name
+        self.parent = parent
         self._func = kwargs.get('func', None)
+        self.func_returns = kwargs.get('func_returns', False)
 
-    def func(self):
-        print('--- Calling function for {name} ---'.format(name=self.name))
+    def parents_list(self):
+        if self.parent is None:
+            return None
+
+        p = self.parent
+        parents = []
+        while p is not None:
+            parents.append(p)
+            if p == ROOT:
+                break
+            p = p.parent
+        return list(reversed(parents))
+
+    def func_isset(self):
+        return self._func is not None
+    
+
+    def func(self, *args, **kwargs):
+        if not self.func_isset():
+            return
+
+        print '--- Calling function for %s ---' % self.name
+
         if self._func:
-            print('Function found.')
-            self._func()
-            print('--- Done. ---')
+            print 'Function found.'
+            out = self._func(self, *args, **kwargs)
+            print '--- Done. ---'
         else:
-            print('None.')
+            print 'None.'
+
+        return out
 
     def __repr__(self):
         return 'MenuItem {name}'.format(name=self.name)
 
-if __name__ == '__main__':
-    def test_func():
-        for i in range(10):
-            time.sleep(0.2)
-            print('i = {i}'.format(i=i))
-        
-    menu = None
-    def menu_curses(screen):
-        global menu
-        menu = Menu(screen)
-        m1 = MenuItem('test1')
-        m2 = MenuItem('test2')
-        m3 = MenuItem('test3', func=test_func)
-        m4 = MenuItem('test4')
-        m5 = MenuItem('test5')
-        menu.add_item(m1)
-        menu.add_item(m2)
-        menu.add_item(m3, m2)
-        menu.add_item(m4, m2)
-        menu.add_item(m5, m2)
+def exit_item(name='Exit'):
+    def null_func(menu_item):
+        return None
+    return MenuItem(name, func=null_func, func_returns=True)
 
-        menu.run()
 
-    curses.wrapper(menu_curses)
+class Menu(object):
+    def __init__(self):
+        self.items = []
+
+    def add_item(self, item, parent=ROOT):
+        self.items.append((item, parent))
+
+    def run(self):
+        def menu_curses(screen, menu_obj):
+            menu = MenuCurses(screen)
+            for (item, parent) in menu_obj.items:
+                menu.add_item(item, parent)
+            out = menu.run()
+            menu.reset_stdout()
+            return out
+        try:
+            return curses_input._wrapper_func(menu_curses, self)
+        except curses.error:
+            raise MenuClosedError('Draw Failed')

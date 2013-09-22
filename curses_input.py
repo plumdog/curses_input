@@ -1,7 +1,7 @@
 #!/usr/bin/python3.2
 
 """
-Copyright Andrew Plummer 2012.
+copyright andrew plummer 2012.
 
 This file is part of CursesInput.
 
@@ -26,6 +26,7 @@ from choice import Choice, MultiChoice
 from string import String
 import colors
 from colors import set_color_scheme, color_schemes
+from menu import Menu, MenuItem, exit_item
 
 
 def set_colors(colors_dict_options):
