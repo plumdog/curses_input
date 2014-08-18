@@ -12,8 +12,15 @@ class Choice(Scrollable):
             raise ValueError('Input iterable must not be empty')
 
         self.select_from = select_from
-        self.title = kwargs.get('title', None)
+
         super(Choice, self).__init__(screen, **kwargs)
+
+        default = kwargs.get('default')
+        if default is not None:
+            try:
+                self.cursor_pos = list(self.select_from).index(default)
+            except IndexError:
+                pass
 
     def draw_body(self):
         """Display the current state of the list."""
